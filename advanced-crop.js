@@ -69,7 +69,7 @@ function detectWithOpenCV(img,cv){
           approx.delete();
         }
       }
-      contourRuns++;contours.delete();hierarchy.delete();
+      ranked.forEach(v=>v.cnt.delete());contourRuns++;contours.delete();hierarchy.delete();
     }
     // Hough line transform supplies independent line evidence.
     const hough=new cv.Mat();cv.HoughLines(edgeSets[1],hough,1,Math.PI/180,Math.max(35,Math.round(Math.min(w,h)*.12)));
@@ -86,17 +86,17 @@ function detectWithOpenCV(img,cv){
     try{if(cv.FastFeatureDetector){const f=cv.FastFeatureDetector.create(20,true);const kp=new cv.KeyPointVector();f.detect(gray,kp);fastRan=true;fastCount=kp.size();for(let i=0;i<Math.min(kp.size(),1000);i++){const z=kp.get(i).pt;featurePoints.push({x:z.x,y:z.y})}kp.delete();f.delete()}}catch(e){}
     try{if(cv.ORB){const o=cv.ORB.create(300);const kp=new cv.KeyPointVector();o.detect(gray,kp);orbRan=true;orbCount=kp.size();for(let i=0;i<Math.min(kp.size(),1000);i++){const z=kp.get(i).pt;featurePoints.push({x:z.x,y:z.y})}kp.delete();o.delete()}}catch(e){}
     // Rank contour candidates by size and geometric completeness; prefer outer boundary.
+    const edgeSupport=new cv.Mat();cv.Canny(blur,edgeSupport,35,110);
     candidates.sort((a,b)=>b.base-a.base);
     for(const cand of candidates){
       const q=cand.p;
-      const edge= new cv.Mat();cv.Canny(blur,edge,35,110);
       let support=0;
       for(let k=0;k<4;k++){
         const a=q[k],b=q[(k+1)%4],n=Math.max(20,Math.min(100,Math.round(Math.hypot(b.x-a.x,b.y-a.y)/6)));
-        let hits=0;for(let j=0;j<n;j++){const f=(j+.5)/n,x=Math.round(a.x+(b.x-a.x)*f),y=Math.round(a.y+(b.y-a.y)*f);let found=false;for(let oy=-2;oy<=2&&!found;oy++)for(let ox=-2;ox<=2;ox++){const xx=x+ox,yy=y+oy;if(xx>=0&&yy>=0&&xx<w&&yy<h&&edge.ucharPtr(yy,xx)[0]>0){found=true;break}}if(found)hits++}
+        let hits=0;for(let j=0;j<n;j++){const f=(j+.5)/n,x=Math.round(a.x+(b.x-a.x)*f),y=Math.round(a.y+(b.y-a.y)*f);let found=false;for(let oy=-2;oy<=2&&!found;oy++)for(let ox=-2;ox<=2;ox++){const xx=x+ox,yy=y+oy;if(xx>=0&&yy>=0&&xx<w&&yy<h&&edgeSupport.ucharPtr(yy,xx)[0]>0){found=true;break}}if(found)hits++}
         support+=hits/n;
       }
-      edge.delete();support/=4;
+      support/=4;
       let houghSupport=0,featureSupport=0;
       for(let k=0;k<4;k++){
         const a=q[k],b=q[(k+1)%4],dx=b.x-a.x,dy=b.y-a.y;
@@ -113,7 +113,7 @@ function detectWithOpenCV(img,cv){
         (1+houghSupport*.035)*(1+featureSupport*.025);
       if(support>.10&&score>bestScore){bestScore=score;best=q.map(p=>({x:p.x/scale,y:p.y/scale}))}
     }
-    masks.forEach(m=>m.delete());kernel.delete();
+    edgeSupport.delete();masks.forEach(m=>m.delete());kernel.delete();
   }finally{src.delete();gray.delete();blur.delete();edges.delete()}
   if(!best)return null;
   const engines=['OpenCV','Canny','Adaptive Threshold','Contour Detection','Hough Lines','Harris'];if(fastRan)engines.push('FAST');if(orbRan)engines.push('ORB');engines.push('Perspective Transform');
