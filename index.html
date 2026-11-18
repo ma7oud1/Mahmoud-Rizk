@@ -64,7 +64,7 @@ footer{text-align:center;color:#8996a3;font-size:10px;padding:18px}
 <div class="row" style="margin-top:13px"><b style="font-size:13px">تحسين الصورة</b><span class="muted">طبّق على كل صورة قبل PDF</span></div>
 <div class="actions"><button class="secondary" onclick="setAllFilter('original')">أصلية</button><button class="secondary" onclick="setAllFilter('document')">مستند واضح</button><button class="secondary" onclick="setAllFilter('bw')">أبيض وأسود</button><button class="secondary" onclick="setAllFilter('gray')">رمادي</button></div>
 <div id="previews" class="preview-grid"></div>
-<div class="muted" style="margin-top:10px">القص التلقائي يعمل داخل جهازك. قد يحتاج تحميل محرك المعالجة لأول مرة إلى اتصال بالإنترنت.</div>
+<div class="muted" style="margin-top:10px">القص الذكي يستخدم عدة محركات لاكتشاف الحواف والزوايا. يلزم الإنترنت لتحميل OpenCV أول مرة، وبعد التخزين المؤقت يمكن استخدامه دون اتصال.</div>
 <div class="actions"><button class="gold" onclick="makePdf()">إنشاء PDF وحفظه</button><button class="secondary" onclick="clearScans()">مسح الصور</button></div>
 </div>
 </section>
@@ -92,12 +92,14 @@ footer{text-align:center;color:#8996a3;font-size:10px;padding:18px}
     <p>حرّك النقاط الأربع إلى زوايا البطاقة أو الورقة. اسحب من داخل الصورة لتحريك أقرب زاوية.</p>
     <div class="crop-stage"><canvas id="cropCanvas"></canvas></div>
     <div class="corner-note">حدد حدود الورقة نفسها بعيدًا عن الظلال قدر الإمكان.</div>
+    <div id="cropEngineStatus" class="muted" style="margin-top:8px">محركات القص: جاهزة للتشغيل عند الطلب</div>
     <div class="actions"><button class="secondary" id="autoCropBtn" onclick="autoDetectCrop()">✦ اكتشاف تلقائي</button><button class="secondary" id="previewCropBtn" onclick="previewCrop()">معاينة قبل القص</button><button class="secondary" id="editCropBtn" style="display:none" onclick="backToCropEdit()">رجوع للتعديل</button><button class="gold" id="applyCropBtn" style="display:none" onclick="applyManualCrop()">اعتماد وحفظ القص</button><button class="secondary" id="resetCropBtn" onclick="resetCropPoints()">إعادة ضبط الإطار</button></div>
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="./crop-engine.js"></script>
+<script src="./advanced-crop.js"></script>
 <script>
 let db, stream=null, scans=[], pdfDoc=null, pdfJsDoc=null, pdfPagesData=[], currentScanMode='document';
 let cropEditIndex=-1, cropEditImage=null, cropPoints=[], cropDragIndex=-1, cropPreviewBlob=null, cropPreviewImage=null, cropPreviewMode=false;
@@ -133,20 +135,29 @@ function setupNewCrop(img){const c=$('cropCanvas'),maxSide=1500,scale=Math.min(1
 function resetCropPoints(){if(cropEditImage){cropPreviewMode=false;cropPreviewBlob=null;cropPreviewImage=null;setupNewCrop(cropEditImage);updateCropPreviewControls()}}
 
 async function autoDetectCrop(){
-  if(!cropEditImage||!window.SmartCrop?.detect){toast('محرك الاكتشاف المحلي غير جاهز — حدّث الصفحة');return}
-  const btn=$('autoCropBtn');btn.disabled=true;btn.textContent='جارٍ اكتشاف الحدود...';
+  if(!cropEditImage){toast('افتح صورة أولًا');return}
+  const btn=$('autoCropBtn'),status=$('cropEngineStatus');
+  btn.disabled=true;btn.textContent='جارٍ تشغيل محركات الاكتشاف...';
+  if(status)status.textContent='جاري تحميل OpenCV وتشغيل محركات اكتشاف الحدود...';
   try{
-    // Let the browser paint the loading state before CPU work begins.
     await new Promise(resolve=>requestAnimationFrame(resolve));
-    const corners=window.SmartCrop.detect(cropEditImage);
-    if(!corners)throw new Error('لم يتم العثور على حدود واضحة. جرّب صورة بإضاءة أفضل أو اضبط الزوايا يدويًا');
+    const result=window.AdvancedSmartCrop
+      ? await window.AdvancedSmartCrop.detect(cropEditImage)
+      : {corners:window.SmartCrop?.detect(cropEditImage),engines:['Offline fallback']};
+    const corners=result?.corners;
+    if(!corners)throw new Error('لم يتم العثور على حدود واضحة. جرّب إضاءة أفضل أو اضبط الزوايا يدويًا');
     const c=$('cropCanvas'),sx=c.width/cropEditImage.naturalWidth,sy=c.height/cropEditImage.naturalHeight;
     cropPoints=orderCropCorners(corners.map(p=>({x:p.x*sx,y:p.y*sy})));drawNewCrop();
-    toast('تم اكتشاف الحدود محليًا — راجع الإطار قبل المعاينة');
-  }catch(e){console.error(e);toast(e.message||'تعذر الاكتشاف التلقائي')}
-  finally{if($('autoCropBtn')){$('autoCropBtn').disabled=false;$('autoCropBtn').textContent='✦ اكتشاف تلقائي'}}
+    const names=(result.engines||[]).join(' • ');
+    if(status)status.textContent='المحركات المستخدمة: '+names+(result.warning?' — '+result.warning:'');
+    toast('تم تحليل الصورة — راجع الإطار قبل المعاينة');
+  }catch(e){
+    console.error(e);if(status)status.textContent='تعذر تشغيل المحركات المتقدمة؛ يمكنك ضبط الإطار يدويًا';
+    toast(e.message||'تعذر الاكتشاف التلقائي');
+  }finally{
+    btn.disabled=false;btn.textContent='✦ اكتشاف تلقائي';
+  }
 }
-
 function drawNewCrop(){const c=$('cropCanvas'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);ctx.drawImage(cropEditImage,0,0,c.width,c.height);ctx.save();ctx.fillStyle='rgba(5,18,31,.58)';ctx.beginPath();ctx.rect(0,0,c.width,c.height);ctx.moveTo(cropPoints[0].x,cropPoints[0].y);for(let i=1;i<4;i++)ctx.lineTo(cropPoints[i].x,cropPoints[i].y);ctx.closePath();ctx.fill('evenodd');ctx.save();ctx.beginPath();ctx.moveTo(cropPoints[0].x,cropPoints[0].y);for(let i=1;i<4;i++)ctx.lineTo(cropPoints[i].x,cropPoints[i].y);ctx.closePath();ctx.clip();const left=Math.min(...cropPoints.map(p=>p.x)),right=Math.max(...cropPoints.map(p=>p.x)),top=Math.min(...cropPoints.map(p=>p.y)),bottom=Math.max(...cropPoints.map(p=>p.y)),step=Math.max(24,Math.round(Math.min(c.width,c.height)/18));ctx.beginPath();for(let x=Math.ceil(left/step)*step;x<right;x+=step){ctx.moveTo(x,top);ctx.lineTo(x,bottom)}for(let y=Math.ceil(top/step)*step;y<bottom;y+=step){ctx.moveTo(left,y);ctx.lineTo(right,y)}ctx.strokeStyle='rgba(255,255,255,.48)';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);ctx.restore();ctx.beginPath();ctx.moveTo(cropPoints[0].x,cropPoints[0].y);for(let i=1;i<4;i++)ctx.lineTo(cropPoints[i].x,cropPoints[i].y);ctx.closePath();ctx.strokeStyle='#ffd36e';ctx.lineWidth=Math.max(3,c.width/420);ctx.stroke();cropPoints.forEach((p,i)=>{ctx.beginPath();ctx.arc(p.x,p.y,Math.max(15,c.width/55),0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.lineWidth=4;ctx.strokeStyle='#c28a22';ctx.stroke();ctx.fillStyle='#14283d';ctx.font='bold '+Math.max(13,c.width/90)+'px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),p.x,p.y)});ctx.restore()}
 
 function updateCropPreviewControls(){
