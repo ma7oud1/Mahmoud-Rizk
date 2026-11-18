@@ -257,7 +257,47 @@ function cropCanvasPoint(e){const c=$('cropCanvas'),r=c.getBoundingClientRect();
 $('cropCanvas').addEventListener('pointerdown',e=>{const p=cropCanvasPoint(e);let best=Infinity;cropDragIndex=-1;cropPoints.forEach((q,i)=>{const d=Math.hypot(q.x-p.x,q.y-p.y);if(d<best){best=d;cropDragIndex=i}});if(best>Math.max(35,$('cropCanvas').width*.055))cropDragIndex=-1;else $('cropCanvas').setPointerCapture(e.pointerId)});
 $('cropCanvas').addEventListener('pointermove',e=>{if(cropDragIndex<0)return;const p=cropCanvasPoint(e),c=$('cropCanvas');cropPoints[cropDragIndex]={x:Math.max(0,Math.min(c.width,p.x)),y:Math.max(0,Math.min(c.height,p.y))};drawCropCanvas()});
 $('cropCanvas').addEventListener('pointerup',()=>cropDragIndex=-1);$('cropCanvas').addEventListener('pointercancel',()=>cropDragIndex=-1);
-async function applyManualCrop(){if(cropEditIndex<0||!cropEditImage)return;try{const c=$('cropCanvas'),sx=cropEditImage.naturalWidth/c.width,sy=cropEditImage.naturalHeight/c.height;const pts=cropPoints.map(p=>({x:p.x*sx,y:p.y*sy}));if(polygonArea(pts)<cropEditImage.naturalWidth*cropEditImage.naturalHeight*.025){toast('مساحة القص صغيرة جدًا');return}const blob=await perspectiveCropBlob(cropEditImage,pts);if(!blob)throw new Error('crop failed');applyCropToScan(cropEditIndex,blob);cancelManualCrop();toast('تم تطبيق القص اليدوي') }catch(e){console.error(e);toast('تعذر تطبيق القص؛ حاول ضبط الزوايا مرة أخرى')}}
+function solveHomography(srcPts,dstPts){
+  const a=[];
+  for(let i=0;i<4;i++){
+    const u=dstPts[i].x,v=dstPts[i].y,x=srcPts[i].x,y=srcPts[i].y;
+    a.push([u,v,1,0,0,0,-x*u,-x*v,x]);
+    a.push([0,0,0,u,v,1,-y*u,-y*v,y]);
+  }
+  for(let col=0;col<8;col++){
+    let pivot=col;for(let row=col+1;row<8;row++)if(Math.abs(a[row][col])>Math.abs(a[pivot][col]))pivot=row;
+    if(Math.abs(a[pivot][col])<1e-10)throw new Error('تعذر حساب زوايا القص');
+    [a[col],a[pivot]]=[a[pivot],a[col]];
+    const div=a[col][col];for(let j=col;j<=8;j++)a[col][j]/=div;
+    for(let row=0;row<8;row++)if(row!==col){const f=a[row][col];for(let j=col;j<=8;j++)a[row][j]-=f*a[col][j]}
+  }
+  return a.map(row=>row[8]);
+}
+async function perspectiveCropFast(img,points){
+  const maxSide=1500,scale=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight));
+  const sw=Math.max(2,Math.round(img.naturalWidth*scale)),sh=Math.max(2,Math.round(img.naturalHeight*scale));
+  const source=document.createElement('canvas');source.width=sw;source.height=sh;
+  const sctx=source.getContext('2d',{willReadFrequently:true});sctx.drawImage(img,0,0,sw,sh);
+  const pts=orderCorners(points.map(p=>({x:p.x*scale,y:p.y*scale})));
+  const width=Math.max(Math.hypot(pts[1].x-pts[0].x,pts[1].y-pts[0].y),Math.hypot(pts[2].x-pts[3].x,pts[2].y-pts[3].y));
+  const height=Math.max(Math.hypot(pts[3].x-pts[0].x,pts[3].y-pts[0].y),Math.hypot(pts[2].x-pts[1].x,pts[2].y-pts[1].y));
+  const outW=Math.max(2,Math.min(maxSide,Math.round(width))),outH=Math.max(2,Math.min(maxSide,Math.round(height)));
+  const H=solveHomography(pts,[{x:0,y:0},{x:outW-1,y:0},{x:outW-1,y:outH-1},{x:0,y:outH-1}]);
+  const srcData=sctx.getImageData(0,0,sw,sh).data,out=document.createElement('canvas');out.width=outW;out.height=outH;
+  const octx=out.getContext('2d'),result=octx.createImageData(outW,outH),dst=result.data;
+  for(let y=0;y<outH;y++){
+    for(let x=0;x<outW;x++){
+      const den=H[6]*x+H[7]*y+1;
+      const sx=Math.max(0,Math.min(sw-1,Math.round((H[0]*x+H[1]*y+H[2])/den)));
+      const sy=Math.max(0,Math.min(sh-1,Math.round((H[3]*x+H[4]*y+H[5])/den)));
+      const si=(sy*sw+sx)*4,di=(y*outW+x)*4;
+      dst[di]=srcData[si];dst[di+1]=srcData[si+1];dst[di+2]=srcData[si+2];dst[di+3]=255;
+    }
+  }
+  octx.putImageData(result,0,0);
+  return await new Promise((resolve,reject)=>out.toBlob(b=>b?resolve(b):reject(new Error('فشل حفظ الصورة بعد القص')),'image/jpeg',.93));
+}
+async function applyManualCrop(){if(cropEditIndex<0||!cropEditImage)return;try{const c=$('cropCanvas'),sx=cropEditImage.naturalWidth/c.width,sy=cropEditImage.naturalHeight/c.height;const pts=cropPoints.map(p=>({x:p.x*sx,y:p.y*sy}));if(polygonArea(pts)<cropEditImage.naturalWidth*cropEditImage.naturalHeight*.025){toast('مساحة القص صغيرة جدًا');return}const blob=await perspectiveCropFast(cropEditImage,pts);if(!blob)throw new Error('crop failed');applyCropToScan(cropEditIndex,blob);cancelManualCrop();toast('تم تطبيق القص اليدوي') }catch(e){console.error(e);toast('تعذر تطبيق القص؛ حاول ضبط الزوايا مرة أخرى')}}
 function cancelManualCrop(){ $('cropModal').classList.add('hidden');cropEditIndex=-1;cropEditImage=null;cropPoints=[];cropDragIndex=-1 }
 function removeScan(i){URL.revokeObjectURL(scans[i].url);scans.splice(i,1);renderScans()}
 function clearScans(){cancelManualCrop();scans.forEach(s=>URL.revokeObjectURL(s.url));scans=[];renderScans()}
