@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#10243a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SMART SCAN">
+<link rel="manifest" href="manifest.webmanifest">
+<title>SMART SCAN PRO V4</title>
+<style>
+:root{--bg:#f2f5f8;--card:#fff;--ink:#14283d;--muted:#6b7b8d;--navy:#10243a;--blue:#1d5b91;--line:#e1e8ef;--accent:#d5a64b;--danger:#b93a42}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,Arial,sans-serif}
+header{background:linear-gradient(135deg,#10243a,#1d4568);color:white;padding:22px 18px 26px;border-radius:0 0 25px 25px;box-shadow:0 8px 25px #10243a22}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px}.brand{font-size:19px;font-weight:850;letter-spacing:.4px}.tag{font-size:10px;color:#e8c77d;border:1px solid #e8c77d66;border-radius:20px;padding:5px 9px}
+header p{color:#c4d3df;font-size:12px;margin:9px 0 0}
+main{max-width:760px;margin:auto;padding:17px 14px 100px}.section-title{font-size:15px;font-weight:800;margin:19px 2px 11px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.tile{border:0;background:var(--card);border-radius:17px;padding:17px 13px;text-align:right;box-shadow:0 3px 13px #132b4110;color:var(--ink);cursor:pointer;min-height:112px}
+.tile .ico{width:39px;height:39px;border-radius:12px;background:#eaf1f7;display:grid;place-items:center;font-size:21px;margin-bottom:10px}.tile b{display:block;font-size:14px}.tile small{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:15px;margin-top:12px;box-shadow:0 3px 13px #132b4108}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.muted{color:var(--muted);font-size:12px}
+button,.btn{font:inherit;border:0;border-radius:12px;padding:11px 14px;background:var(--navy);color:white;font-weight:700;cursor:pointer}
+button.secondary,.btn.secondary{background:#eaf0f5;color:var(--ink)}button.gold{background:var(--accent);color:#18283a}button.danger{background:#fff0f0;color:var(--danger)}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,select{font:inherit;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff;color:var(--ink);max-width:100%}
+input[type=file]{width:100%;font-size:12px}
+.preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.scan-card{border:1px solid var(--line);border-radius:13px;padding:8px;min-width:0}.scan-card img{width:100%;height:145px;object-fit:contain;background:#f2f5f8;border-radius:8px}.scan-card .row{margin-top:7px}.scan-card img{transition:filter .15s}.scan-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.scan-tools select{font-size:11px;padding:7px;flex:1;min-width:95px}
+#camera{width:100%;background:#101820;border-radius:14px;max-height:55vh;object-fit:contain}
+.hidden{display:none!important}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.file-list{display:grid;gap:8px;margin-top:10px}.file-item{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:12px}.file-icon{width:38px;height:42px;background:#edf2f6;border-radius:9px;display:grid;place-items:center;font-size:20px}.file-info{flex:1;min-width:0}.file-info b{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.file-info small{color:var(--muted);font-size:10px}
+.thumb-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:12px}.thumb{border:1px solid var(--line);border-radius:10px;padding:6px}.thumb canvas{width:100%;height:105px;object-fit:contain;background:#f5f6f8}.thumb small{display:block;text-align:center;margin:4px 0;font-size:10px}
+footer{text-align:center;color:#8996a3;font-size:10px;padding:18px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#14283d;color:#fff;padding:11px 16px;border-radius:30px;font-size:12px;z-index:30;display:none;max-width:90%;text-align:center}
+.crop-modal{position:fixed;inset:0;background:#071421d9;z-index:25;display:flex;align-items:center;justify-content:center;padding:12px}.crop-dialog{width:min(760px,100%);max-height:96dvh;overflow:auto;background:#fff;border-radius:18px;padding:14px;box-shadow:0 20px 60px #0005}.crop-dialog h3{margin:0 0 5px;font-size:16px}.crop-dialog p{margin:0 0 10px;color:#68798a;font-size:12px}.crop-stage{background:#14283d;border-radius:12px;display:grid;place-items:center;min-height:180px;padding:6px}.crop-stage canvas{display:block;max-width:100%;max-height:65dvh;width:auto;height:auto;touch-action:none;border-radius:5px}.corner-note{font-size:11px;color:#657487;margin-top:8px}
+@media(min-width:600px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.tile{min-height:130px}}
+</style>
+</head>
+<body>
+<header><div class="top"><div class="brand">SMART SCAN <span style="color:#e8c77d">PRO V4</span></div><span class="tag">PRIVATE • LOCAL</span></div><p>ماسح المستندات والبطاقات ومحرر PDF</p></header>
+<main>
+<section id="home">
+<div class="section-title">ابدأ من هنا</div>
+<div class="grid">
+<button class="tile" onclick="openScanner('document')"><span class="ico">▤</span><b>اسكانر مستندات</b><small>تصوير وتحسين الأوراق</small></button>
+<button class="tile" onclick="openScanner('id')"><span class="ico">▣</span><b>اسكانر بطاقات</b><small>الوجه والظهر في ملف واحد</small></button>
+<button class="tile" onclick="showPdfTools()"><span class="ico">📄</span><b>تعديل PDF</b><small>دمج وترتيب وحذف وتدوير</small></button>
+<button class="tile" onclick="showLibrary()"><span class="ico">▣</span><b>ملفاتي</b><small>المستندات المحفوظة محليًا</small></button>
+</div>
+<div class="section-title">مساحة العمل</div>
+<div class="panel"><div class="row"><div><b>ملفاتك على هذا الجهاز</b><div class="muted">لا يوجد حساب أو رفع تلقائي للسحابة</div></div><span style="font-size:25px">🔐</span></div><div class="row" style="margin-top:13px"><span class="muted" id="storageCount">جارٍ التحميل...</span><button class="secondary" onclick="showLibrary()">عرض الملفات</button></div></div>
+</section>
+
+<section id="scanner" class="hidden">
+<div class="row"><div><b id="scanTitle">اسكانر المستندات</b><div class="muted">التقط صورة أو اخترها من جهازك</div></div><button class="secondary" onclick="goHome()">رجوع</button></div>
+<div class="panel">
+<div class="row"><label class="muted">وضع التصوير</label><select id="scanMode" onchange="modeChanged()"><option value="document">مستند</option><option value="id">بطاقة شخصية</option></select></div>
+<div id="idHint" class="muted hidden" style="margin-top:9px">صوّر الوجه الأمامي ثم الخلفي. سيتم وضعهما في صفحة PDF واحدة.</div>
+<div id="cameraBox" class="hidden" style="margin-top:12px"><video id="camera" autoplay playsinline></video><div class="actions"><button onclick="capturePhoto()">التقاط الصورة</button><button class="secondary" onclick="stopCamera()">إغلاق الكاميرا</button></div></div>
+<div class="actions"><button onclick="startCamera()">فتح الكاميرا</button><label class="btn secondary" for="photoInput">اختيار صور</label><input id="photoInput" type="file" accept="image/*" multiple capture="environment" class="hidden"></div>
+<input id="photoInputFallback" type="file" accept="image/*" multiple class="hidden">
+<div class="row" style="margin-top:13px"><b style="font-size:13px">تحسين الصورة</b><span class="muted">طبّق على كل صورة قبل PDF</span></div>
+<div class="actions"><button class="secondary" onclick="setAllFilter('original')">أصلية</button><button class="secondary" onclick="setAllFilter('document')">مستند واضح</button><button class="secondary" onclick="setAllFilter('bw')">أبيض وأسود</button><button class="secondary" onclick="setAllFilter('gray')">رمادي</button></div>
+<div id="previews" class="preview-grid"></div>
+<div class="muted" style="margin-top:10px">القص التلقائي يعمل داخل جهازك. قد يحتاج تحميل محرك المعالجة لأول مرة إلى اتصال بالإنترنت.</div>
+<div class="actions"><button class="gold" onclick="makePdf()">إنشاء PDF وحفظه</button><button class="secondary" onclick="clearScans()">مسح الصور</button></div>
+</div>
+</section>
+
+<section id="pdfTools" class="hidden">
+<div class="row"><div><b>محرر PDF</b><div class="muted">استيراد ملفات PDF وإدارة الصفحات</div></div><button class="secondary" onclick="goHome()">رجوع</button></div>
+<div class="panel">
+<input id="pdfInput" type="file" accept="application/pdf" multiple>
+<div class="muted" style="margin-top:7px">يمكنك اختيار أكثر من ملف لدمجها. تتم المعالجة داخل المتصفح.</div>
+<div id="pdfPages" class="thumb-list"></div>
+<div class="actions"><button onclick="exportEditedPdf()">حفظ PDF المعدل</button><button class="secondary" onclick="clearPdf()">تفريغ</button></div>
+</div>
+</section>
+
+<section id="library" class="hidden">
+<div class="row"><div><b>ملفاتي</b><div class="muted">الملفات المحفوظة على هذا الجهاز</div></div><button class="secondary" onclick="goHome()">رجوع</button></div>
+<div class="panel"><div class="row"><span class="muted">تخزين محلي عبر قاعدة بيانات المتصفح</span><button class="secondary" onclick="exportBackup()">تصدير نسخة احتياطية</button></div><div id="fileList" class="file-list"></div></div>
+</section>
+<footer>SMART SCAN PRO • ملفاتك تظل على جهازك ما لم تقم بمشاركتها بنفسك</footer>
+</main>
+<div id="toast"></div>
+<div id="cropModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-label="ضبط حدود القص">
+  <div class="crop-dialog">
+    <h3>ضبط حدود البطاقة أو المستند</h3>
+    <p>اسحب الدوائر الأربع لتطابق زوايا المستند بدقة، ثم اضغط تطبيق القص.</p>
+    <div class="crop-stage"><canvas id="cropCanvas"></canvas></div>
+    <div class="corner-note">تأكد أن كل دائرة على زاوية الورقة، وليس على ظلها.</div>
+    <div class="actions"><button class="gold" onclick="applyManualCrop()">تطبيق القص</button><button class="secondary" onclick="cancelManualCrop()">إلغاء</button></div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+let db, stream=null, scans=[], pdfDoc=null, pdfJsDoc=null, pdfPagesData=[], currentScanMode='document';
+let cvPromise=null, cropEditIndex=-1, cropEditImage=null, cropPoints=[], cropDragIndex=-1;
+const FILTERS={original:'none',document:'contrast(1.35) brightness(1.08) saturate(.85)',bw:'grayscale(1) contrast(1.45)',gray:'grayscale(1)'};
+const $=id=>document.getElementById(id);
+function toast(msg){const t=$('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',2600)}
+function showOnly(id){['home','scanner','pdfTools','library'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
+function goHome(){stopCamera();showOnly('home');refreshCount()}
+function openScanner(mode){currentScanMode=mode;$('scanMode').value=mode;$('scanTitle').textContent=mode==='id'?'اسكانر البطاقات':'اسكانر المستندات';$('idHint').classList.toggle('hidden',mode!=='id');showOnly('scanner')}
+function modeChanged(){currentScanMode=$('scanMode').value;$('idHint').classList.toggle('hidden',currentScanMode!=='id')}
+function openDb(){return new Promise((resolve,reject)=>{const r=indexedDB.open('SmartScanProDB',1);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('files'))d.createObjectStore('files',{keyPath:'id',autoIncrement:true})};r.onsuccess=()=>{db=r.result;resolve(db)};r.onerror=()=>reject(r.error)})}
+function store(mode='readonly'){return db.transaction('files',mode).objectStore('files')}
+function saveFile(name,type,blob){return new Promise((resolve,reject)=>{const r=store('readwrite').add({name,type,blob,created:new Date().toISOString()});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+function getFiles(){return new Promise((resolve,reject)=>{const r=store().getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+function deleteFile(id){return new Promise((resolve,reject)=>{const r=store('readwrite').delete(Number(id));r.onsuccess=resolve;r.onerror=()=>reject(r.error)})}
+async function refreshCount(){try{$('storageCount').textContent=`${(await getFiles()).length} ملف محفوظ`}catch(e){$('storageCount').textContent='التخزين غير متاح'}}
+async function startCamera(){try{if(!navigator.mediaDevices?.getUserMedia)throw Error('الكاميرا تحتاج HTTPS أو متصفحًا يدعمها');stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});$('camera').srcObject=stream;$('cameraBox').classList.remove('hidden')}catch(e){toast('تعذر فتح الكاميرا: '+e.message)}}
+function stopCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('cameraBox').classList.add('hidden')}
+function capturePhoto(){const v=$('camera'),c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);c.toBlob(b=>addScan(b), 'image/jpeg',.92)}
+$('photoInput').addEventListener('change',async e=>{for(const f of e.target.files)if(f.type.startsWith('image/'))addScan(f);e.target.value=''});
+function addScan(blob){const url=URL.createObjectURL(blob);scans.push({blob,url,rotation:0,filter:'original',originalBlob:null});renderScans()}
+function setAllFilter(f){scans.forEach(s=>s.filter=f);renderScans()}
+function renderScans(){$('previews').innerHTML='';scans.forEach((s,i)=>{const d=document.createElement('div');d.className='scan-card';d.innerHTML=`<img src="${s.url}" style="transform:rotate(${s.rotation}deg);filter:${FILTERS[s.filter]||'none'}"><div class="row"><small>صورة ${i+1}</small><button class="secondary" onclick="rotateScan(${i})">↻</button><button class="danger" onclick="removeScan(${i})">حذف</button></div><div class="scan-tools"><select aria-label="تحسين الصورة" onchange="setScanFilter(${i},this.value)"><option value="original" ${s.filter==='original'?'selected':''}>أصلية</option><option value="document" ${s.filter==='document'?'selected':''}>مستند واضح</option><option value="bw" ${s.filter==='bw'?'selected':''}>أبيض وأسود</option><option value="gray" ${s.filter==='gray'?'selected':''}>رمادي</option></select></div><div class="actions"><button class="secondary" onclick="autoCropScan(${i})">✦ اكتشاف وقص تلقائي</button><button class="secondary" onclick="openManualCrop(${i})">ضبط يدوي</button>${s.originalBlob?`<button class="secondary" onclick="restoreScan(${i})">استعادة الأصل</button>`:''}</div>`;$('previews').appendChild(d)})}
+function rotateScan(i){scans[i].rotation=(scans[i].rotation+90)%360;renderScans()}
+function setScanFilter(i,f){scans[i].filter=f;renderScans()}
+function restoreScan(i){const s=scans[i];if(!s.originalBlob)return;URL.revokeObjectURL(s.url);s.blob=s.originalBlob;s.originalBlob=null;s.url=URL.createObjectURL(s.blob);s.rotation=0;renderScans();toast('تمت استعادة الصورة الأصلية')}
+function applyCropToScan(i,blob){const s=scans[i];if(!s.originalBlob)s.originalBlob=s.blob;URL.revokeObjectURL(s.url);s.blob=blob;s.url=URL.createObjectURL(blob);s.rotation=0;renderScans()}
+async function loadOpenCV(){
+  if(window.cv&&window.cv.Mat)return window.cv;
+  if(cvPromise)return cvPromise;
+  cvPromise=new Promise((resolve,reject)=>{
+    let settled=false;const finish=()=>{if(!settled&&window.cv&&window.cv.Mat){settled=true;clearTimeout(timer);resolve(window.cv)}};
+    const timer=setTimeout(()=>{if(!settled){settled=true;reject(new Error('انتهت مهلة تحميل محرك القص'))}},45000);
+    const previous=window.Module||{};
+    window.Module={...previous,onRuntimeInitialized:function(){try{if(typeof previous.onRuntimeInitialized==='function')previous.onRuntimeInitialized()}catch(e){}finish()}};
+    if(window.cv&&typeof window.cv.then==='function')window.cv.then(mod=>{window.cv=mod;finish()}).catch(reject);
+    const script=document.createElement('script');script.src='https://docs.opencv.org/4.x/opencv.js';script.async=true;
+    script.onload=()=>{const begin=Date.now();const poll=()=>{finish();if(!settled&&Date.now()-begin<44000)setTimeout(poll,120)};poll()};
+    script.onerror=()=>{if(!settled){settled=true;clearTimeout(timer);reject(new Error('تعذر تحميل محرك القص'))}};
+    document.head.appendChild(script);
+  }).catch(err=>{cvPromise=null;throw err});
+  return cvPromise;
+}
+function loadImageBlob(blob){return new Promise((resolve,reject)=>{const img=new Image(),url=URL.createObjectURL(blob);img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('تعذر قراءة الصورة'))};img.src=url})}
+function orderCorners(points){
+  if(!Array.isArray(points)||points.length!==4)throw new Error('يلزم تحديد أربع زوايا');
+  const cx=points.reduce((a,p)=>a+p.x,0)/4,cy=points.reduce((a,p)=>a+p.y,0)/4;
+  let ordered=points.slice().sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
+  let signed=0;for(let i=0;i<4;i++){const j=(i+1)%4;signed+=ordered[i].x*ordered[j].y-ordered[j].x*ordered[i].y}
+  if(signed<0)ordered.reverse();
+  let start=0;for(let i=1;i<4;i++)if(ordered[i].x+ordered[i].y<ordered[start].x+ordered[start].y)start=i;
+  ordered=ordered.slice(start).concat(ordered.slice(0,start));
+  if(polygonArea(ordered)<4)throw new Error('حدود القص غير صالحة');return ordered;
+}
+function polygonArea(pts){let a=0;for(let i=0;i<pts.length;i++){const j=(i+1)%pts.length;a+=pts[i].x*pts[j].y-pts[j].x*pts[i].y}return Math.abs(a/2)}
+function detectCornersWithCV(img,cv,mode='document'){
+  const maxSide=1800,scale=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight));
+  const w=Math.max(2,Math.round(img.naturalWidth*scale)),h=Math.max(2,Math.round(img.naturalHeight*scale));
+  const work=document.createElement('canvas');work.width=w;work.height=h;work.getContext('2d',{willReadFrequently:true}).drawImage(img,0,0,w,h);
+  const src=cv.imread(work),gray=new cv.Mat(),blur=new cv.Mat(),edges=new cv.Mat(),closed=new cv.Mat(),kernel=cv.Mat.ones(3,3,cv.CV_8U),hierarchy=new cv.Mat();
+  let best=null,bestScore=-Infinity;
+  try{
+    cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);cv.GaussianBlur(gray,blur,new cv.Size(5,5),0,0,cv.BORDER_DEFAULT);
+    // Several thresholds make the detector less dependent on lighting and textured backgrounds.
+    const attempts=[[28,90],[35,110],[50,150],[70,190],[90,220],[22,65]];
+    for(const [lo,hi] of attempts){
+      edges.setTo(new cv.Scalar(0));closed.setTo(new cv.Scalar(0));
+      const contours=new cv.MatVector();
+      cv.Canny(blur,edges,lo,hi);cv.morphologyEx(edges,closed,cv.MORPH_CLOSE,kernel);
+      cv.findContours(closed,contours,hierarchy,cv.RETR_LIST,cv.CHAIN_APPROX_SIMPLE);
+      for(let i=0;i<contours.size();i++){
+        const contour=contours.get(i),area=Math.abs(cv.contourArea(contour));
+        if(area<w*h*0.045){contour.delete();continue}
+        const perimeter=cv.arcLength(contour,true);
+        for(const epsilon of [0.008,0.012,0.016,0.022,0.03,0.04]){
+          const approx=new cv.Mat();cv.approxPolyDP(contour,approx,epsilon*perimeter,true);
+          if(approx.rows===4&&cv.isContourConvex(approx)){
+            const raw=[];for(let k=0;k<4;k++)raw.push({x:approx.data32S[k*2],y:approx.data32S[k*2+1]});
+            try{
+              const q=orderCorners(raw),edgeLengths=q.map((pt,k)=>Math.hypot(pt.x-q[(k+1)%4].x,pt.y-q[(k+1)%4].y));
+              const width=(edgeLengths[0]+edgeLengths[2])/2,height=(edgeLengths[1]+edgeLengths[3])/2;
+              const ratio=width/Math.max(1,height),quadArea=polygonArea(q);
+              const margin=Math.min(w,h)*0.002;
+              const inside=q.every(pt=>pt.x>=margin&&pt.y>=margin&&pt.x<=w-margin&&pt.y<=h-margin);
+              if(!inside||quadArea<w*h*0.045||Math.min(...edgeLengths)<Math.min(w,h)*0.065)continue;
+              // ID cards have a landscape format; document mode remains shape-agnostic.
+              const ratioPenalty=mode==='id'?Math.abs(Math.log(ratio/1.586)):Math.max(0,Math.abs(Math.log(ratio))-1.25)*0.25;
+              if(mode==='id'&&(ratio<1.12||ratio>2.25))continue;
+              const minEdge=Math.min(...edgeLengths),maxEdge=Math.max(...edgeLengths);
+              const edgeBalance=minEdge/Math.max(1,maxEdge);
+              const areaScore=Math.log(quadArea/(w*h));
+              const score=areaScore*1.15-ratioPenalty*1.8+edgeBalance*0.18;
+              if(score>bestScore){bestScore=score;best=q.map(pt=>({x:pt.x/scale,y:pt.y/scale}))}
+            }catch(e){}
+          }
+          approx.delete();
+        }
+        contour.delete();
+      }
+      contours.delete();
+    }
+  }finally{src.delete();gray.delete();blur.delete();edges.delete();closed.delete();kernel.delete();hierarchy.delete()}
+  return best;
+}
+async function perspectiveCropBlob(img,points,cv){
+  if(!cv)try{cv=await loadOpenCV()}catch(e){}
+  if(!cv){
+    const xs=points.map(p=>p.x),ys=points.map(p=>p.y),x=Math.max(0,Math.min(...xs)),y=Math.max(0,Math.min(...ys)),w=Math.max(1,Math.min(img.naturalWidth-x,Math.max(...xs)-x)),h=Math.max(1,Math.min(img.naturalHeight-y,Math.max(...ys)-y));
+    const c=document.createElement('canvas');c.width=Math.round(w);c.height=Math.round(h);c.getContext('2d').drawImage(img,x,y,w,h,0,0,c.width,c.height);return new Promise(r=>c.toBlob(r,'image/jpeg',.94));
+  }
+  const scale=Math.min(1,2800/Math.max(img.naturalWidth,img.naturalHeight));
+  const sw=Math.max(2,Math.round(img.naturalWidth*scale)),sh=Math.max(2,Math.round(img.naturalHeight*scale));
+  const sourceCanvas=document.createElement('canvas');sourceCanvas.width=sw;sourceCanvas.height=sh;sourceCanvas.getContext('2d').drawImage(img,0,0,sw,sh);
+  const pts=points.map(p=>({x:p.x*scale,y:p.y*scale}));
+  // A tiny safety margin protects printed edges and ID data from being clipped.
+  const cx=pts.reduce((v,p)=>v+p.x,0)/4,cy=pts.reduce((v,p)=>v+p.y,0)/4,pad=Math.min(sw,sh)*0.007;
+  const padded=pts.map(p=>{const dx=p.x-cx,dy=p.y-cy,len=Math.hypot(dx,dy)||1;return{x:Math.max(0,Math.min(sw-1,p.x+dx/len*pad)),y:Math.max(0,Math.min(sh-1,p.y+dy/len*pad))}});
+  const [tl,tr,br,bl]=orderCorners(padded);
+  const width=Math.max(Math.hypot(tr.x-tl.x,tr.y-tl.y),Math.hypot(br.x-bl.x,br.y-bl.y));
+  const height=Math.max(Math.hypot(bl.x-tl.x,bl.y-tl.y),Math.hypot(br.x-tr.x,br.y-tr.y));
+  const outW=Math.max(2,Math.min(2800,Math.round(width))),outH=Math.max(2,Math.min(2800,Math.round(height)));
+  const src=cv.imread(sourceCanvas),dst=new cv.Mat(),srcTri=cv.matFromArray(4,1,cv.CV_32FC2,[tl.x,tl.y,tr.x,tr.y,br.x,br.y,bl.x,bl.y]),dstTri=cv.matFromArray(4,1,cv.CV_32FC2,[0,0,outW-1,0,outW-1,outH-1,0,outH-1]),M=cv.getPerspectiveTransform(srcTri,dstTri);
+  try{cv.warpPerspective(src,dst,M,new cv.Size(outW,outH),cv.INTER_CUBIC,cv.BORDER_REPLICATE);const out=document.createElement('canvas');cv.imshow(out,dst);return await new Promise((resolve,reject)=>out.toBlob(b=>b?resolve(b):reject(new Error('فشل إخراج الصورة')),'image/jpeg',.94))}
+  finally{src.delete();dst.delete();srcTri.delete();dstTri.delete();M.delete()}
+}
+async function autoCropScan(i){
+  const s=scans[i];if(!s)return;toast('جارٍ تحليل الصورة واكتشاف الحواف...');
+  try{const cv=await loadOpenCV();const img=await loadImageBlob(s.blob);const corners=detectCornersWithCV(img,cv,currentScanMode);if(!corners){cropEditIndex=i;cropEditImage=img;setupCropCanvas(img,null);$('cropModal').classList.remove('hidden');toast('لم تظهر حدود واضحة؛ اضبط الزوايا الأربع يدويًا');return}const blob=await perspectiveCropBlob(img,corners,cv);applyCropToScan(i,blob);toast('تم اكتشاف الحواف وقص الصورة بنجاح')}
+  catch(e){console.error(e);try{const img=await loadImageBlob(s.blob);cropEditIndex=i;cropEditImage=img;setupCropCanvas(img,null);$('cropModal').classList.remove('hidden');toast('تعذر الاكتشاف التلقائي؛ يمكنك ضبط الزوايا يدويًا')}catch(err){toast('تعذر فتح الصورة للقص')}}
+}
+async function openManualCrop(i){try{cropEditIndex=i;cropEditImage=await loadImageBlob(scans[i].blob);setupCropCanvas(cropEditImage,null);$('cropModal').classList.remove('hidden')}catch(e){toast('تعذر فتح الصورة للقص')}}
+function setupCropCanvas(img,points){const c=$('cropCanvas'),max=1250,scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));c.width=Math.max(2,Math.round(img.naturalWidth*scale));c.height=Math.max(2,Math.round(img.naturalHeight*scale));cropPoints=points?points.map(p=>({x:p.x*scale,y:p.y*scale})):[{x:c.width*.035,y:c.height*.035},{x:c.width*.965,y:c.height*.035},{x:c.width*.965,y:c.height*.965},{x:c.width*.035,y:c.height*.965}];drawCropCanvas()}
+function drawCropCanvas(){const c=$('cropCanvas'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);ctx.drawImage(cropEditImage,0,0,c.width,c.height);ctx.save();ctx.fillStyle='#0b172855';ctx.beginPath();ctx.rect(0,0,c.width,c.height);ctx.moveTo(cropPoints[0].x,cropPoints[0].y);for(let i=1;i<4;i++)ctx.lineTo(cropPoints[i].x,cropPoints[i].y);ctx.closePath();ctx.fill('evenodd');ctx.strokeStyle='#f4c35e';ctx.lineWidth=Math.max(3,c.width/350);ctx.beginPath();ctx.moveTo(cropPoints[0].x,cropPoints[0].y);for(let i=1;i<4;i++)ctx.lineTo(cropPoints[i].x,cropPoints[i].y);ctx.closePath();ctx.stroke();cropPoints.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,Math.max(9,c.width/75),0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.lineWidth=3;ctx.strokeStyle='#d39d38';ctx.stroke()});ctx.restore()}
+function cropCanvasPoint(e){const c=$('cropCanvas'),r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height}}
+$('cropCanvas').addEventListener('pointerdown',e=>{const p=cropCanvasPoint(e);let best=Infinity;cropDragIndex=-1;cropPoints.forEach((q,i)=>{const d=Math.hypot(q.x-p.x,q.y-p.y);if(d<best){best=d;cropDragIndex=i}});if(best>Math.max(35,$('cropCanvas').width*.055))cropDragIndex=-1;else $('cropCanvas').setPointerCapture(e.pointerId)});
+$('cropCanvas').addEventListener('pointermove',e=>{if(cropDragIndex<0)return;const p=cropCanvasPoint(e),c=$('cropCanvas');cropPoints[cropDragIndex]={x:Math.max(0,Math.min(c.width,p.x)),y:Math.max(0,Math.min(c.height,p.y))};drawCropCanvas()});
+$('cropCanvas').addEventListener('pointerup',()=>cropDragIndex=-1);$('cropCanvas').addEventListener('pointercancel',()=>cropDragIndex=-1);
+async function applyManualCrop(){if(cropEditIndex<0||!cropEditImage)return;try{const c=$('cropCanvas'),sx=cropEditImage.naturalWidth/c.width,sy=cropEditImage.naturalHeight/c.height;const pts=cropPoints.map(p=>({x:p.x*sx,y:p.y*sy}));if(polygonArea(pts)<cropEditImage.naturalWidth*cropEditImage.naturalHeight*.025){toast('مساحة القص صغيرة جدًا');return}const blob=await perspectiveCropBlob(cropEditImage,pts);if(!blob)throw new Error('crop failed');applyCropToScan(cropEditIndex,blob);cancelManualCrop();toast('تم تطبيق القص اليدوي') }catch(e){console.error(e);toast('تعذر تطبيق القص؛ حاول ضبط الزوايا مرة أخرى')}}
+function cancelManualCrop(){ $('cropModal').classList.add('hidden');cropEditIndex=-1;cropEditImage=null;cropPoints=[];cropDragIndex=-1 }
+function removeScan(i){URL.revokeObjectURL(scans[i].url);scans.splice(i,1);renderScans()}
+function clearScans(){cancelManualCrop();scans.forEach(s=>URL.revokeObjectURL(s.url));scans=[];renderScans()}
+async function blobToDataURL(blob){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(blob)})}
+async function imageToPngBytes(item){const img=new Image();img.src=await blobToDataURL(item.blob);await img.decode();const c=document.createElement('canvas');const rot=item.rotation||0;const sideways=rot%180!==0;c.width=sideways?img.height:img.width;c.height=sideways?img.width:img.height;const x=c.getContext('2d');x.translate(c.width/2,c.height/2);x.rotate(rot*Math.PI/180);x.filter=FILTERS[item.filter]||'none';x.drawImage(img,-img.width/2,-img.height/2);x.filter='none';const b=await new Promise(r=>c.toBlob(r,'image/png'));return new Uint8Array(await b.arrayBuffer())}
+async function makePdf(){if(!scans.length){toast('أضف صورة واحدة على الأقل');return}try{const {PDFDocument}=PDFLib;const doc=await PDFDocument.create();if(currentScanMode==='id'&&scans.length>=2){const page=doc.addPage([595.28,841.89]);for(let i=0;i<Math.min(2,scans.length);i++){const png=await doc.embedPng(await imageToPngBytes(scans[i]));const maxW=500,maxH=300,scale=Math.min(maxW/png.width,maxH/png.height);page.drawImage(png,{x:(595.28-png.width*scale)/2,y:i===0?470:95,width:png.width*scale,height:png.height*scale})}}else{for(const s of scans){const png=await doc.embedPng(await imageToPngBytes(s));const page=doc.addPage([595.28,841.89]);const scale=Math.min(555/png.width,800/png.height);page.drawImage(png,{x:(595.28-png.width*scale)/2,y:(841.89-png.height*scale)/2,width:png.width*scale,height:png.height*scale})}}const bytes=await doc.save();const blob=new Blob([bytes],{type:'application/pdf'});const name=(currentScanMode==='id'?'ID-Card':'Scan')+'-'+new Date().toISOString().slice(0,10)+'.pdf';await saveFile(name,'application/pdf',blob);downloadBlob(blob,name);toast('تم إنشاء وحفظ ملف PDF');clearScans();refreshCount()}catch(e){console.error(e);toast('حدث خطأ أثناء إنشاء PDF')}}
+function downloadBlob(blob,name){const a=document.createElement('a');const u=URL.createObjectURL(blob);a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1500)}
+function showPdfTools(){showOnly('pdfTools')}
+$('pdfInput').addEventListener('change',async e=>{try{const files=[...e.target.files];if(!files.length)return;const {PDFDocument}=PDFLib;pdfDoc=await PDFDocument.create();pdfPagesData=[];for(const f of files){const bytes=await f.arrayBuffer();const src=await PDFDocument.load(bytes);const copied=await pdfDoc.copyPages(src,src.getPageIndices());copied.forEach(p=>pdfDoc.addPage(p))}await renderPdfThumbs();toast('تم استيراد الصفحات')}catch(err){console.error(err);toast('تعذر فتح الملف. قد يكون محميًا بكلمة مرور.')}});
+async function renderPdfThumbs(){const area=$('pdfPages');area.innerHTML='';const pages=pdfDoc.getPages();let previewDoc=null;try{if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';previewDoc=await pdfjsLib.getDocument({data:await pdfDoc.save()}).promise}}catch(err){console.warn('PDF preview unavailable',err)}for(let i=0;i<pages.length;i++){const d=document.createElement('div');d.className='thumb';const c=document.createElement('canvas');c.style.width='100%';c.style.height='105px';c.style.objectFit='contain';c.style.background='#f5f6f8';d.appendChild(c);const label=document.createElement('small');label.textContent='صفحة '+(i+1);d.appendChild(label);const actions=document.createElement('div');actions.className='row';actions.innerHTML=`<button class="secondary" onclick="movePage(${i},-1)" title="لأعلى">↑</button><button class="secondary" onclick="rotatePage(${i})">↻</button><button class="danger" onclick="removePage(${i})">×</button>`;d.appendChild(actions);area.appendChild(d);if(previewDoc){try{const page=await previewDoc.getPage(i+1);const vp=page.getViewport({scale:0.32});c.width=vp.width;c.height=vp.height;await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise}catch(e){c.getContext('2d').fillText('PDF',10,20)}}else{const ctx=c.getContext('2d');ctx.fillStyle='#68798a';ctx.font='16px sans-serif';ctx.fillText('PDF',12,24)}}}
+async function movePage(i,dir){const pages=pdfDoc.getPages();const j=i+dir;if(j<0||j>=pages.length)return;const {PDFDocument}=PDFLib;const tmp=await PDFDocument.create();const copies=await tmp.copyPages(pdfDoc,pages.map((_,k)=>k));const order=copies.map((_,k)=>k);[order[i],order[j]]=[order[j],order[i]];const out=await PDFDocument.create();for(const k of order){const [p]=await out.copyPages(tmp,[k]);out.addPage(p)}pdfDoc=out;renderPdfThumbs()}
+function rotatePage(i){const p=pdfDoc.getPages()[i];p.setRotation(PDFLib.degrees((p.getRotation().angle+90)%360));renderPdfThumbs()}
+async function removePage(i){if(pdfDoc.getPageCount()<=1){toast('لا يمكن حذف آخر صفحة');return}pdfDoc.removePage(i);renderPdfThumbs()}
+async function exportEditedPdf(){if(!pdfDoc||!pdfDoc.getPageCount()){toast('استورد ملف PDF أولًا');return}const bytes=await pdfDoc.save();const blob=new Blob([bytes],{type:'application/pdf'});const name='Edited-PDF-'+Date.now()+'.pdf';await saveFile(name,'application/pdf',blob);downloadBlob(blob,name);toast('تم حفظ PDF المعدل');refreshCount()}
+function clearPdf(){pdfDoc=null;$('pdfPages').innerHTML='';$('pdfInput').value=''}
+async function showLibrary(){showOnly('library');const files=await getFiles();const area=$('fileList');area.innerHTML='';if(!files.length){area.innerHTML='<div class="muted">لا توجد ملفات محفوظة حتى الآن</div>';return}files.sort((a,b)=>b.id-a.id).forEach(f=>{const d=document.createElement('div');d.className='file-item';const size=(f.blob.size/1024).toFixed(0)+' KB';d.innerHTML=`<div class="file-icon">📄</div><div class="file-info"><b></b><small>${size} • ${new Date(f.created).toLocaleDateString('ar-EG')}</small></div><button class="secondary">فتح</button><button class="danger">حذف</button>`;d.querySelector('b').textContent=f.name;d.querySelectorAll('button')[0].onclick=()=>downloadBlob(f.blob,f.name);d.querySelectorAll('button')[1].onclick=async()=>{if(confirm('حذف الملف من هذا الجهاز؟')){await deleteFile(f.id);showLibrary();refreshCount()}};area.appendChild(d)})}
+async function exportBackup(){const files=await getFiles();if(!files.length){toast('لا توجد ملفات');return}const pack=[];for(const f of files)pack.push({name:f.name,type:f.type,created:f.created,data:await blobToDataURL(f.blob)});const blob=new Blob([JSON.stringify({app:'SMART SCAN PRO',version:1,files:pack})],{type:'application/json'});downloadBlob(blob,'SMART-SCAN-BACKUP.json');toast('تم تصدير النسخة الاحتياطية')}
+(async()=>{try{await openDb();await refreshCount()}catch(e){toast('تعذر تفعيل التخزين المحلي')}if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{})})();
+</script>
+</body></html>
