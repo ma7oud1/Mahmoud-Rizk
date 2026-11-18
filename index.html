@@ -58,7 +58,7 @@ footer{text-align:center;color:#8996a3;font-size:10px;padding:18px}
 <div class="row"><label class="muted">وضع التصوير</label><select id="scanMode" onchange="modeChanged()"><option value="document">مستند</option><option value="id">بطاقة شخصية</option></select></div>
 <div id="idHint" class="muted hidden" style="margin-top:9px">صوّر الوجه الأمامي ثم الخلفي. سيتم وضعهما في صفحة PDF واحدة.</div>
 <div id="cameraBox" class="hidden" style="margin-top:12px"><video id="camera" autoplay playsinline></video><div class="actions"><button onclick="capturePhoto()">التقاط الصورة</button><button class="secondary" onclick="stopCamera()">إغلاق الكاميرا</button></div></div>
-<div class="actions"><button onclick="startCamera()">فتح الكاميرا</button><label class="btn secondary" for="photoInput">اختيار صور</label><input id="photoInput" type="file" accept="image/*" multiple capture="environment" class="hidden"></div>
+<div class="actions"><button onclick="startCamera()">فتح الكاميرا</button><label class="btn secondary" for="photoInput">اختيار صور</label><input id="photoInput" type="file" accept="image/*" multiple class="hidden"></div>
 <input id="photoInputFallback" type="file" accept="image/*" multiple class="hidden">
 <div class="row" style="margin-top:13px"><b style="font-size:13px">تحسين الصورة</b><span class="muted">طبّق على كل صورة قبل PDF</span></div>
 <div class="actions"><button class="secondary" onclick="setAllFilter('original')">أصلية</button><button class="secondary" onclick="setAllFilter('document')">مستند واضح</button><button class="secondary" onclick="setAllFilter('bw')">أبيض وأسود</button><button class="secondary" onclick="setAllFilter('gray')">رمادي</button></div>
