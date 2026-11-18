@@ -116,7 +116,8 @@ function detectWithOpenCV(img,cv){
     masks.forEach(m=>m.delete());kernel.delete();
   }finally{src.delete();gray.delete();blur.delete();edges.delete()}
   if(!best)return null;
-  const engines=['OpenCV','Canny','Adaptive Threshold','Contour Detection','Hough Lines','Harris'];if(fastRan)engines.push('FAST');if(orbRan)engines.push('ORB');engines.push('Perspective Transform');\n  return {corners:best,engines,stats:{contourRuns,houghCount,harrisCount,fastCount,orbCount}};
+  const engines=['OpenCV','Canny','Adaptive Threshold','Contour Detection','Hough Lines','Harris'];if(fastRan)engines.push('FAST');if(orbRan)engines.push('ORB');engines.push('Perspective Transform');
+  return {corners:best,engines,stats:{contourRuns,houghCount,harrisCount,fastCount,orbCount}};
 }
 async function detect(img){
   try{return detectWithOpenCV(img,await loadOpenCV())}
