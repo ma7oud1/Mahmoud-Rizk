@@ -8,7 +8,7 @@ self.addEventListener('fetch',e=>{
   const library=['cdn.jsdelivr.net','cdnjs.cloudflare.com','docs.opencv.org'].includes(url.hostname);
   if(!same&&!library)return;
   e.respondWith(caches.match(req).then(hit=>hit||fetch(req).then(res=>{
-    if(res&&res.ok){const copy=res.clone();caches.open(CACHE).then(c=>c.put(req,copy));}
+    if(res&&(res.ok||res.type==='opaque')){const copy=res.clone();caches.open(CACHE).then(c=>c.put(req,copy));}
     return res;
   }).catch(()=>{if(req.mode==='navigate')return caches.match('./index.html');throw new Error('Offline resource unavailable') })));
 });
