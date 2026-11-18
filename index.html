@@ -92,14 +92,14 @@ footer{text-align:center;color:#8996a3;font-size:10px;padding:18px}
     <p>حرّك النقاط الأربع إلى زوايا البطاقة أو الورقة. اسحب من داخل الصورة لتحريك أقرب زاوية.</p>
     <div class="crop-stage"><canvas id="cropCanvas"></canvas></div>
     <div class="corner-note">حدد حدود الورقة نفسها بعيدًا عن الظلال قدر الإمكان.</div>
-    <div class="actions"><button class="secondary" id="autoCropBtn" onclick="autoDetectCrop()">✦ اكتشاف تلقائي</button><button class="gold" id="applyCropBtn" onclick="applyManualCrop()">تطبيق القص وحفظ النتيجة</button><button class="secondary" onclick="resetCropPoints()">إعادة ضبط الإطار</button></div>
+    <div class="actions"><button class="secondary" id="autoCropBtn" onclick="autoDetectCrop()">✦ اكتشاف تلقائي</button><button class="secondary" id="previewCropBtn" onclick="previewCrop()">معاينة قبل القص</button><button class="secondary" id="editCropBtn" style="display:none" onclick="backToCropEdit()">رجوع للتعديل</button><button class="gold" id="applyCropBtn" style="display:none" onclick="applyManualCrop()">اعتماد وحفظ القص</button><button class="secondary" id="resetCropBtn" onclick="resetCropPoints()">إعادة ضبط الإطار</button></div>
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 let db, stream=null, scans=[], pdfDoc=null, pdfJsDoc=null, pdfPagesData=[], currentScanMode='document';
-let cropEditIndex=-1, cropEditImage=null, cropPoints=[], cropDragIndex=-1;
+let cropEditIndex=-1, cropEditImage=null, cropPoints=[], cropDragIndex=-1, cropPreviewBlob=null, cropPreviewImage=null, cropPreviewMode=false;
 const FILTERS={original:'none',document:'contrast(1.35) brightness(1.08) saturate(.85)',bw:'grayscale(1) contrast(1.45)',gray:'grayscale(1)'};
 const $=id=>document.getElementById(id);
 function toast(msg){const t=$('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',2600)}
@@ -129,7 +129,7 @@ function polygonArea(pts){let a=0;for(let i=0;i<pts.length;i++){const j=(i+1)%pt
 function orderCropCorners(points){if(!Array.isArray(points)||points.length!==4)throw new Error('حدد الزوايا الأربع');const cx=points.reduce((v,p)=>v+p.x,0)/4,cy=points.reduce((v,p)=>v+p.y,0)/4;let q=points.slice().sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));let start=0;for(let i=1;i<4;i++)if(q[i].x+q[i].y<q[start].x+q[start].y)start=i;q=q.slice(start).concat(q.slice(0,start));if(polygonArea(q)<25)throw new Error('إطار القص غير صالح');return q}
 async function openCropTool(i){if(!scans[i])return;try{cropEditIndex=i;cropEditImage=await loadImageBlob(scans[i].blob);setupNewCrop(cropEditImage);$('cropModal').classList.remove('hidden')}catch(e){console.error(e);toast('تعذر فتح الصورة للقص')}}
 function setupNewCrop(img){const c=$('cropCanvas'),maxSide=1500,scale=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight));c.width=Math.max(2,Math.round(img.naturalWidth*scale));c.height=Math.max(2,Math.round(img.naturalHeight*scale));const mx=c.width*.035,my=c.height*.035;cropPoints=[{x:mx,y:my},{x:c.width-mx,y:my},{x:c.width-mx,y:c.height-my},{x:mx,y:c.height-my}];drawNewCrop()}
-function resetCropPoints(){if(cropEditImage)setupNewCrop(cropEditImage)}
+function resetCropPoints(){if(cropEditImage){cropPreviewMode=false;cropPreviewBlob=null;cropPreviewImage=null;setupNewCrop(cropEditImage);updateCropPreviewControls()}}
 
 let cropCvPromise=null;
 async function loadCropEngine(){
@@ -210,14 +210,42 @@ async function autoDetectCrop(){
 }
 
 function drawNewCrop(){const c=$('cropCanvas'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);ctx.drawImage(cropEditImage,0,0,c.width,c.height);ctx.save();ctx.fillStyle='rgba(5,18,31,.58)';ctx.beginPath();ctx.rect(0,0,c.width,c.height);ctx.moveTo(cropPoints[0].x,cropPoints[0].y);for(let i=1;i<4;i++)ctx.lineTo(cropPoints[i].x,cropPoints[i].y);ctx.closePath();ctx.fill('evenodd');ctx.beginPath();ctx.moveTo(cropPoints[0].x,cropPoints[0].y);for(let i=1;i<4;i++)ctx.lineTo(cropPoints[i].x,cropPoints[i].y);ctx.closePath();ctx.strokeStyle='#ffd36e';ctx.lineWidth=Math.max(3,c.width/420);ctx.stroke();cropPoints.forEach((p,i)=>{ctx.beginPath();ctx.arc(p.x,p.y,Math.max(15,c.width/55),0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.lineWidth=4;ctx.strokeStyle='#c28a22';ctx.stroke();ctx.fillStyle='#14283d';ctx.font='bold '+Math.max(13,c.width/90)+'px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),p.x,p.y)});ctx.restore()}
+
+function updateCropPreviewControls(){
+  $('autoCropBtn').style.display=cropPreviewMode?'none':'';
+  $('previewCropBtn').style.display=cropPreviewMode?'none':'';
+  $('resetCropBtn').style.display=cropPreviewMode?'none':'';
+  $('editCropBtn').style.display=cropPreviewMode?'':'none';
+  $('applyCropBtn').style.display=cropPreviewMode?'':'none';
+}
+async function previewCrop(){
+  if(!cropEditImage||cropEditIndex<0)return;
+  const btn=$('previewCropBtn');btn.disabled=true;btn.textContent='جارٍ تجهيز المعاينة...';
+  try{
+    const sx=cropEditImage.naturalWidth/$('cropCanvas').width,sy=cropEditImage.naturalHeight/$('cropCanvas').height;
+    const pts=cropPoints.map(p=>({x:p.x*sx,y:p.y*sy}));
+    if(polygonArea(pts)<cropEditImage.naturalWidth*cropEditImage.naturalHeight*.02)throw new Error('مساحة القص صغيرة جدًا');
+    cropPreviewBlob=await renderPerspectiveCrop(cropEditImage,pts);
+    cropPreviewImage=await loadImageBlob(cropPreviewBlob);
+    const c=$('cropCanvas'),maxSide=1500,scale=Math.min(1,maxSide/Math.max(cropPreviewImage.naturalWidth,cropPreviewImage.naturalHeight));
+    c.width=Math.max(2,Math.round(cropPreviewImage.naturalWidth*scale));c.height=Math.max(2,Math.round(cropPreviewImage.naturalHeight*scale));
+    const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);ctx.drawImage(cropPreviewImage,0,0,c.width,c.height);
+    cropPreviewMode=true;updateCropPreviewControls();toast('دي معاينة النتيجة قبل الحفظ');
+  }catch(e){console.error(e);toast(e.message||'تعذر تجهيز المعاينة')}
+  finally{btn.disabled=false;btn.textContent='معاينة قبل القص'}
+}
+function backToCropEdit(){
+  if(!cropEditImage)return;
+  cropPreviewMode=false;cropPreviewBlob=null;cropPreviewImage=null;setupNewCrop(cropEditImage);updateCropPreviewControls();
+}
 function cropCanvasPoint(e){const c=$('cropCanvas'),r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height}}
 $('cropCanvas').addEventListener('pointerdown',e=>{if(!cropEditImage)return;const p=cropCanvasPoint(e);let best=Infinity;cropDragIndex=-1;cropPoints.forEach((q,i)=>{const d=Math.hypot(q.x-p.x,q.y-p.y);if(d<best){best=d;cropDragIndex=i}});if(best>Math.max(48,$('cropCanvas').width*.09)){cropDragIndex=-1;return}$('cropCanvas').setPointerCapture(e.pointerId);e.preventDefault()});
 $('cropCanvas').addEventListener('pointermove',e=>{if(cropDragIndex<0)return;const p=cropCanvasPoint(e),c=$('cropCanvas'),pad=Math.max(3,c.width*.002);cropPoints[cropDragIndex]={x:Math.max(pad,Math.min(c.width-pad,p.x)),y:Math.max(pad,Math.min(c.height-pad,p.y))};drawNewCrop();e.preventDefault()});
 $('cropCanvas').addEventListener('pointerup',()=>cropDragIndex=-1);$('cropCanvas').addEventListener('pointercancel',()=>cropDragIndex=-1);
 function solveCropTransform(srcPts,dstPts){const a=[];for(let i=0;i<4;i++){const u=dstPts[i].x,v=dstPts[i].y,x=srcPts[i].x,y=srcPts[i].y;a.push([u,v,1,0,0,0,-x*u,-x*v,x]);a.push([0,0,0,u,v,1,-y*u,-y*v,y])}for(let col=0;col<8;col++){let pivot=col;for(let row=col+1;row<8;row++)if(Math.abs(a[row][col])>Math.abs(a[pivot][col]))pivot=row;if(Math.abs(a[pivot][col])<1e-10)throw new Error('تعذر حساب منظور الصورة');[a[col],a[pivot]]=[a[pivot],a[col]];const div=a[col][col];for(let j=col;j<=8;j++)a[col][j]/=div;for(let row=0;row<8;row++)if(row!==col){const z=a[row][col];for(let j=col;j<=8;j++)a[row][j]-=z*a[col][j]}}return a.map(row=>row[8])}
 async function renderPerspectiveCrop(img,points){const scale=Math.min(1,2200/Math.max(img.naturalWidth,img.naturalHeight)),sw=Math.max(2,Math.round(img.naturalWidth*scale)),sh=Math.max(2,Math.round(img.naturalHeight*scale)),source=document.createElement('canvas');source.width=sw;source.height=sh;const sctx=source.getContext('2d',{willReadFrequently:true});sctx.drawImage(img,0,0,sw,sh);const q=orderCropCorners(points.map(p=>({x:p.x*scale,y:p.y*scale}))),w=Math.max(Math.hypot(q[1].x-q[0].x,q[1].y-q[0].y),Math.hypot(q[2].x-q[3].x,q[2].y-q[3].y)),h=Math.max(Math.hypot(q[3].x-q[0].x,q[3].y-q[0].y),Math.hypot(q[2].x-q[1].x,q[2].y-q[1].y)),ow=Math.max(2,Math.min(2200,Math.round(w))),oh=Math.max(2,Math.min(2200,Math.round(h))),dst=[{x:0,y:0},{x:ow-1,y:0},{x:ow-1,y:oh-1},{x:0,y:oh-1}],H=solveCropTransform(q,dst),src=sctx.getImageData(0,0,sw,sh).data,out=document.createElement('canvas');out.width=ow;out.height=oh;const octx=out.getContext('2d',{willReadFrequently:true}),frame=octx.createImageData(ow,oh),d=frame.data;for(let y=0;y<oh;y++)for(let x=0;x<ow;x++){const den=H[6]*x+H[7]*y+1,sx=Math.max(0,Math.min(sw-1,(H[0]*x+H[1]*y+H[2])/den)),sy=Math.max(0,Math.min(sh-1,(H[3]*x+H[4]*y+H[5])/den)),x0=Math.floor(sx),y0=Math.floor(sy),x1=Math.min(sw-1,x0+1),y1=Math.min(sh-1,y0+1),fx=sx-x0,fy=sy-y0,di=(y*ow+x)*4;for(let ch=0;ch<3;ch++){const p=src[(y0*sw+x0)*4+ch],q1=src[(y0*sw+x1)*4+ch],r=src[(y1*sw+x0)*4+ch],t=src[(y1*sw+x1)*4+ch];d[di+ch]=Math.round((p*(1-fx)+q1*fx)*(1-fy)+(r*(1-fx)+t*fx)*fy)}d[di+3]=255}octx.putImageData(frame,0,0);return await new Promise((resolve,reject)=>out.toBlob(b=>b?resolve(b):reject(new Error('تعذر تجهيز الصورة')),'image/jpeg',.96))}
-async function applyManualCrop(){if(cropEditIndex<0||!cropEditImage)return;const btn=$('applyCropBtn');btn.disabled=true;btn.textContent='جارٍ تجهيز الصورة...';try{const sx=cropEditImage.naturalWidth/$('cropCanvas').width,sy=cropEditImage.naturalHeight/$('cropCanvas').height,pts=cropPoints.map(p=>({x:p.x*sx,y:p.y*sy}));if(polygonArea(pts)<cropEditImage.naturalWidth*cropEditImage.naturalHeight*.02)throw new Error('مساحة القص صغيرة جدًا');const blob=await renderPerspectiveCrop(cropEditImage,pts);applyCropToScan(cropEditIndex,blob);cancelManualCrop();toast('تم قص الصورة بنجاح')}catch(e){console.error(e);toast(e.message||'تعذر تطبيق القص')}finally{if($('applyCropBtn')){$('applyCropBtn').disabled=false;$('applyCropBtn').textContent='تطبيق القص وحفظ النتيجة'}}}
-function cancelManualCrop(){$('cropModal').classList.add('hidden');cropEditIndex=-1;cropEditImage=null;cropPoints=[];cropDragIndex=-1}
+async function applyManualCrop(){if(cropEditIndex<0||!cropPreviewBlob)return;const btn=$('applyCropBtn');btn.disabled=true;btn.textContent='جارٍ الحفظ...';try{applyCropToScan(cropEditIndex,cropPreviewBlob);cancelManualCrop();toast('تم حفظ القص بنجاح')}catch(e){console.error(e);toast(e.message||'تعذر حفظ القص')}finally{if($('applyCropBtn')){$('applyCropBtn').disabled=false;$('applyCropBtn').textContent='اعتماد وحفظ القص'}}}
+function cancelManualCrop(){$('cropModal').classList.add('hidden');cropEditIndex=-1;cropEditImage=null;cropPoints=[];cropDragIndex=-1;cropPreviewBlob=null;cropPreviewImage=null;cropPreviewMode=false;updateCropPreviewControls()}
 function removeScan(i){URL.revokeObjectURL(scans[i].url);scans.splice(i,1);renderScans()}
 function clearScans(){cancelManualCrop();scans.forEach(s=>URL.revokeObjectURL(s.url));scans=[];renderScans()}
 async function blobToDataURL(blob){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(blob)})}
