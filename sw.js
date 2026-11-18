@@ -1,4 +1,4 @@
-const CACHE='smart-scan-pro-v2';
+const CACHE='smart-scan-pro-v3';
 const CORE=['./','./index.html','./crop-engine.js'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('smart-scan-pro-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
