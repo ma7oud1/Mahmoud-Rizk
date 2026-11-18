@@ -35,7 +35,7 @@ function detectWithOpenCV(img,cv){
   const w=Math.max(2,Math.round(img.naturalWidth*scale)),h=Math.max(2,Math.round(img.naturalHeight*scale));
   const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(img,0,0,w,h);
   const src=cv.imread(canvas),gray=new cv.Mat(),blur=new cv.Mat(),edges=new cv.Mat(),kernel=cv.Mat.ones(3,3,cv.CV_8U);
-  let best=null,bestScore=0,contourRuns=0,houghCount=0,harrisCount=0,fastCount=0,orbCount=0;
+  let best=null,bestScore=0,contourRuns=0,houghCount=0,harrisCount=0,fastCount=0,orbCount=0;\n  const featurePoints=[],houghLines=[];
   const candidates=[];
   try{
     cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);cv.GaussianBlur(gray,blur,new cv.Size(5,5),0,0,cv.BORDER_DEFAULT);
@@ -72,13 +72,16 @@ function detectWithOpenCV(img,cv){
     }
     // Hough line transform supplies independent line evidence.
     const hough=new cv.Mat();cv.HoughLines(edgeSets[1],hough,1,Math.PI/180,Math.max(35,Math.round(Math.min(w,h)*.12)));
-    houghCount=hough.rows;hough.delete();
+    houghCount=hough.rows;\n    for(let i=0;i<Math.min(hough.rows,500);i++){const rho=hough.data32F[i*2],theta=hough.data32F[i*2+1];houghLines.push({rho,theta})}\n    hough.delete();
     // Harris corner response and Shi-Tomasi/Harris feature points.
     const harris=new cv.Mat();cv.cornerHarris(blur,harris,2,3,.04);
-    const corners=new cv.Mat();cv.goodFeaturesToTrack(blur,corners,120,.01,8,new cv.Mat(),3,true,.04);harrisCount=corners.rows;harris.delete();corners.delete();
+    const corners=new cv.Mat(),featureMask=new cv.Mat();
+    cv.goodFeaturesToTrack(blur,corners,120,.01,8,featureMask,3,true,.04);
+    harrisCount=corners.rows;for(let i=0;i<corners.rows;i++)featurePoints.push({x:corners.data32F[i*2],y:corners.data32F[i*2+1]});
+    harris.delete();corners.delete();featureMask.delete();
     // FAST and ORB keypoints add independent corner/feature evidence.
-    try{if(cv.FastFeatureDetector){const f=cv.FastFeatureDetector.create(20,true);const kp=new cv.KeyPointVector();f.detect(gray,kp);fastCount=kp.size();kp.delete();f.delete()}}catch(e){}
-    try{if(cv.ORB){const o=cv.ORB.create(300);const kp=new cv.KeyPointVector();o.detect(gray,kp);orbCount=kp.size();kp.delete();o.delete()}}catch(e){}
+    try{if(cv.FastFeatureDetector){const f=cv.FastFeatureDetector.create(20,true);const kp=new cv.KeyPointVector();f.detect(gray,kp);fastCount=kp.size();for(let i=0;i<Math.min(kp.size(),1000);i++){const z=kp.get(i).pt;featurePoints.push({x:z.x,y:z.y})}kp.delete();f.delete()}}catch(e){}
+    try{if(cv.ORB){const o=cv.ORB.create(300);const kp=new cv.KeyPointVector();o.detect(gray,kp);orbCount=kp.size();for(let i=0;i<Math.min(kp.size(),1000);i++){const z=kp.get(i).pt;featurePoints.push({x:z.x,y:z.y})}kp.delete();o.delete()}}catch(e){}
     // Rank contour candidates by size and geometric completeness; prefer outer boundary.
     candidates.sort((a,b)=>b.base-a.base);
     for(const cand of candidates){
@@ -91,7 +94,20 @@ function detectWithOpenCV(img,cv){
         support+=hits/n;
       }
       edge.delete();support/=4;
-      const score=Math.pow(cand.base,.72)*(.35+support*1.7)*(.7+cand.shape*.3);
+      let houghSupport=0,featureSupport=0;
+      for(let k=0;k<4;k++){
+        const a=q[k],b=q[(k+1)%4],dx=b.x-a.x,dy=b.y-a.y;
+        const theta=(Math.atan2(dy,dx)+Math.PI/2+Math.PI*2)%(Math.PI*2);
+        const rho=a.x*Math.cos(theta)+a.y*Math.sin(theta);
+        if(houghLines.some(line=>{
+          let da=Math.abs(line.theta-theta);da=Math.min(da,Math.abs(Math.PI-da),Math.abs(2*Math.PI-da));
+          return da<.16&&Math.abs(line.rho-rho)<Math.max(7,Math.min(w,h)*.025);
+        }))houghSupport++;
+        const radius=Math.max(10,Math.min(w,h)*.035);
+        if(featurePoints.some(pt=>Math.hypot(pt.x-a.x,pt.y-a.y)<radius))featureSupport++;
+      }
+      const score=Math.pow(cand.base,.72)*(.35+support*1.7)*(.7+cand.shape*.3)*
+        (1+houghSupport*.035)*(1+featureSupport*.025);
       if(support>.10&&score>bestScore){bestScore=score;best=q.map(p=>({x:p.x/scale,y:p.y/scale}))}
     }
     masks.forEach(m=>m.delete());kernel.delete();
