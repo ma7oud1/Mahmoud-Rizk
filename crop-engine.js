@@ -40,7 +40,9 @@
       const a=top[i],b=top[j],d=Math.abs(a.t-b.t),ad=Math.min(d,angles-d);
       if(ad>3)continue;
       const sep=Math.abs(a.rho-b.rho);if(sep<Math.min(w,h)*.12)continue;
-      pairs.push({a,b,angle:(a.t+b.t)/2%angles,score:a.v+b.v});
+      const aa=a.t*angleStep*Math.PI/180,bb=b.t*angleStep*Math.PI/180;
+      const mean=Math.atan2(Math.sin(2*aa)+Math.sin(2*bb),Math.cos(2*aa)+Math.cos(2*bb))/2;
+      pairs.push({a,b,angle:((mean+Math.PI) % Math.PI)/(angleStep*Math.PI/180),score:a.v+b.v});
     }
     const cross=(l1,l2)=>{
       const a=cos[l1.t],b=sin[l1.t],c=cos[l2.t],d=sin[l2.t],det=a*d-b*c;
@@ -48,6 +50,25 @@
       return{x:(l1.rho*d-b*l2.rho)/det,y:(a*l2.rho-l1.rho*c)/det};
     };
     const inside=p=>p&&p.x>=0&&p.y>=0&&p.x<w&&p.y<h;
+    const sideSupport=pts=>{
+      let total=0,weak=1;
+      for(let k=0;k<4;k++){
+        const p=pts[k],q=pts[(k+1)%4],len=Math.hypot(q.x-p.x,q.y-p.y);
+        const samples=Math.max(18,Math.min(120,Math.round(len/5)));
+        let hit=0;
+        for(let s=0;s<samples;s++){
+          const f=(s+.5)/samples,x=p.x+(q.x-p.x)*f,y=p.y+(q.y-p.y)*f;
+          let local=0;
+          for(let oy=-2;oy<=2;oy++)for(let ox=-2;ox<=2;ox++){
+            const xx=Math.round(x)+ox,yy=Math.round(y)+oy;
+            if(xx>=1&&yy>=1&&xx<w-1&&yy<h-1)local=Math.max(local,mag[yy*w+xx]);
+          }
+          if(local>=threshold*.62)hit++;
+        }
+        const coverage=hit/samples;total+=coverage;weak=Math.min(weak,coverage);
+      }
+      return {average:total/4,weak};
+    };
     let best=null,bestScore=0;
     for(let i=0;i<pairs.length;i++)for(let j=i+1;j<pairs.length;j++){
       const A=pairs[i],B=pairs[j],ad=Math.abs(A.angle-B.angle),ang=Math.min(ad,angles-ad);
@@ -62,8 +83,12 @@
       const ratio1=Math.max(sides[0],sides[2])/Math.max(1,Math.min(sides[0],sides[2]));
       const ratio2=Math.max(sides[1],sides[3])/Math.max(1,Math.min(sides[1],sides[3]));
       if(ratio1>3.8||ratio2>3.8)continue;
+      const support=sideSupport(pts);
+      if(support.average<.16||support.weak<.035)continue;
       const borderPenalty=pts.reduce((s,p)=>s+(Math.min(p.x,p.y,w-p.x,h-p.y)<margin*1.5?1:0),0);
-      const score=(A.score+B.score)*Math.sqrt(fraction)*(1-borderPenalty*.16);
+      // Favor a complete outer document boundary over strong printed lines inside it.
+      const score=(A.score+B.score)*Math.pow(fraction,.68)*
+        (.28+support.average*1.9)*(.65+support.weak*.7)*(1-borderPenalty*.12);
       if(score>bestScore){bestScore=score;best=pts.map(p=>({x:p.x/scale,y:p.y/scale}))}
     }
     if(!best)return null;
