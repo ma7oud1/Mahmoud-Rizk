@@ -73,7 +73,9 @@ function detectWithOpenCV(img,cv){
     }
     // Hough line transform supplies independent line evidence.
     const hough=new cv.Mat();cv.HoughLines(edgeSets[1],hough,1,Math.PI/180,Math.max(35,Math.round(Math.min(w,h)*.12)));
-    houghCount=hough.rows;\n    for(let i=0;i<Math.min(hough.rows,500);i++){const rho=hough.data32F[i*2],theta=hough.data32F[i*2+1];houghLines.push({rho,theta})}\n    hough.delete();
+    houghCount=hough.rows;;
+    for(let i=0;i<Math.min(hough.rows,500);i++){const rho=hough.data32F[i*2],theta=hough.data32F[i*2+1];houghLines.push({rho,theta})};
+    hough.delete();
     // Harris corner response and Shi-Tomasi/Harris feature points.
     const harris=new cv.Mat();cv.cornerHarris(blur,harris,2,3,.04);
     const corners=new cv.Mat(),featureMask=new cv.Mat();
