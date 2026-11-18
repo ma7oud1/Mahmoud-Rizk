@@ -35,7 +35,8 @@ function detectWithOpenCV(img,cv){
   const w=Math.max(2,Math.round(img.naturalWidth*scale)),h=Math.max(2,Math.round(img.naturalHeight*scale));
   const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(img,0,0,w,h);
   const src=cv.imread(canvas),gray=new cv.Mat(),blur=new cv.Mat(),edges=new cv.Mat(),kernel=cv.Mat.ones(3,3,cv.CV_8U);
-  let best=null,bestScore=0,contourRuns=0,houghCount=0,harrisCount=0,fastCount=0,orbCount=0;\n  const featurePoints=[],houghLines=[];
+  let best=null,bestScore=0,contourRuns=0,houghCount=0,harrisCount=0,fastCount=0,orbCount=0;
+  const featurePoints=[],houghLines=[];
   const candidates=[];
   try{
     cv.cvtColor(src,gray,cv.COLOR_RGBA2GRAY);cv.GaussianBlur(gray,blur,new cv.Size(5,5),0,0,cv.BORDER_DEFAULT);
