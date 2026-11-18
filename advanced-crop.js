@@ -35,7 +35,7 @@ function detectWithOpenCV(img,cv){
   const w=Math.max(2,Math.round(img.naturalWidth*scale)),h=Math.max(2,Math.round(img.naturalHeight*scale));
   const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(img,0,0,w,h);
   const src=cv.imread(canvas),gray=new cv.Mat(),blur=new cv.Mat(),edges=new cv.Mat(),kernel=cv.Mat.ones(3,3,cv.CV_8U);
-  let best=null,bestScore=0,contourRuns=0,houghCount=0,harrisCount=0,fastCount=0,orbCount=0;
+  let best=null,bestScore=0,contourRuns=0,houghCount=0,harrisCount=0,fastCount=0,orbCount=0,fastRan=false,orbRan=false;
   const featurePoints=[],houghLines=[];
   const candidates=[];
   try{
@@ -83,8 +83,8 @@ function detectWithOpenCV(img,cv){
     harrisCount=corners.rows;for(let i=0;i<corners.rows;i++)featurePoints.push({x:corners.data32F[i*2],y:corners.data32F[i*2+1]});
     harris.delete();corners.delete();featureMask.delete();
     // FAST and ORB keypoints add independent corner/feature evidence.
-    try{if(cv.FastFeatureDetector){const f=cv.FastFeatureDetector.create(20,true);const kp=new cv.KeyPointVector();f.detect(gray,kp);fastCount=kp.size();for(let i=0;i<Math.min(kp.size(),1000);i++){const z=kp.get(i).pt;featurePoints.push({x:z.x,y:z.y})}kp.delete();f.delete()}}catch(e){}
-    try{if(cv.ORB){const o=cv.ORB.create(300);const kp=new cv.KeyPointVector();o.detect(gray,kp);orbCount=kp.size();for(let i=0;i<Math.min(kp.size(),1000);i++){const z=kp.get(i).pt;featurePoints.push({x:z.x,y:z.y})}kp.delete();o.delete()}}catch(e){}
+    try{if(cv.FastFeatureDetector){const f=cv.FastFeatureDetector.create(20,true);const kp=new cv.KeyPointVector();f.detect(gray,kp);fastRan=true;fastCount=kp.size();for(let i=0;i<Math.min(kp.size(),1000);i++){const z=kp.get(i).pt;featurePoints.push({x:z.x,y:z.y})}kp.delete();f.delete()}}catch(e){}
+    try{if(cv.ORB){const o=cv.ORB.create(300);const kp=new cv.KeyPointVector();o.detect(gray,kp);orbRan=true;orbCount=kp.size();for(let i=0;i<Math.min(kp.size(),1000);i++){const z=kp.get(i).pt;featurePoints.push({x:z.x,y:z.y})}kp.delete();o.delete()}}catch(e){}
     // Rank contour candidates by size and geometric completeness; prefer outer boundary.
     candidates.sort((a,b)=>b.base-a.base);
     for(const cand of candidates){
@@ -116,7 +116,7 @@ function detectWithOpenCV(img,cv){
     masks.forEach(m=>m.delete());kernel.delete();
   }finally{src.delete();gray.delete();blur.delete();edges.delete()}
   if(!best)return null;
-  return {corners:best,engines:['OpenCV','Canny','Adaptive Threshold','Contour Detection','Hough Lines','Harris','FAST','ORB','Perspective Transform'],stats:{contourRuns,houghCount,harrisCount,fastCount,orbCount}};
+  const engines=['OpenCV','Canny','Adaptive Threshold','Contour Detection','Hough Lines','Harris'];if(fastRan)engines.push('FAST');if(orbRan)engines.push('ORB');engines.push('Perspective Transform');\n  return {corners:best,engines,stats:{contourRuns,houghCount,harrisCount,fastCount,orbCount}};
 }
 async function detect(img){
   try{return detectWithOpenCV(img,await loadOpenCV())}
