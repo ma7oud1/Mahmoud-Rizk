@@ -57,6 +57,7 @@ footer{text-align:center;color:#8996a3;font-size:10px;padding:18px}
 <div class="panel">
 <div class="row"><label class="muted">وضع التصوير</label><select id="scanMode" onchange="modeChanged()"><option value="document">مستند</option><option value="id">بطاقة شخصية</option></select></div>
 <div id="idHint" class="muted hidden" style="margin-top:9px">صوّر الوجه الأمامي ثم الخلفي. سيتم وضعهما في صفحة PDF واحدة.</div>
+<div id="idLayoutBox" class="row hidden" style="margin-top:10px"><label for="idLayout" class="muted">ترتيب الوجه والظهر في PDF</label><select id="idLayout"><option value="vertical">وش وظهر — فوق بعض</option><option value="horizontal">صورتين في وش واحد — جنب بعض</option></select></div>
 <div id="cameraBox" class="hidden" style="margin-top:12px"><video id="camera" autoplay playsinline></video><div class="actions"><button onclick="capturePhoto()">التقاط الصورة</button><button class="secondary" onclick="stopCamera()">إغلاق الكاميرا</button></div></div>
 <div class="actions"><button onclick="startCamera()">فتح الكاميرا</button><label class="btn secondary" for="photoInput">اختيار صور</label><input id="photoInput" type="file" accept="image/*" multiple class="hidden"></div>
 <input id="photoInputFallback" type="file" accept="image/*" multiple class="hidden">
@@ -105,7 +106,7 @@ function toast(msg){const t=$('toast');t.textContent=msg;t.style.display='block'
 function showOnly(id){['home','scanner','pdfTools','library'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
 function goHome(){stopCamera();showOnly('home');refreshCount()}
 function openScanner(mode){currentScanMode=mode;$('scanMode').value=mode;$('scanTitle').textContent=mode==='id'?'اسكانر البطاقات':'اسكانر المستندات';$('idHint').classList.toggle('hidden',mode!=='id');showOnly('scanner')}
-function modeChanged(){currentScanMode=$('scanMode').value;$('idHint').classList.toggle('hidden',currentScanMode!=='id')}
+function modeChanged(){currentScanMode=$('scanMode').value;$('idHint').classList.toggle('hidden',currentScanMode!=='id');$('idLayoutBox').classList.toggle('hidden',currentScanMode!=='id')}
 function openDb(){return new Promise((resolve,reject)=>{const r=indexedDB.open('SmartScanProDB',1);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('files'))d.createObjectStore('files',{keyPath:'id',autoIncrement:true})};r.onsuccess=()=>{db=r.result;resolve(db)};r.onerror=()=>reject(r.error)})}
 function store(mode='readonly'){return db.transaction('files',mode).objectStore('files')}
 function saveFile(name,type,blob){return new Promise((resolve,reject)=>{const r=store('readwrite').add({name,type,blob,created:new Date().toISOString()});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
@@ -248,7 +249,37 @@ function removeScan(i){URL.revokeObjectURL(scans[i].url);scans.splice(i,1);rende
 function clearScans(){cancelManualCrop();scans.forEach(s=>URL.revokeObjectURL(s.url));scans=[];renderScans()}
 async function blobToDataURL(blob){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(blob)})}
 async function imageToPngBytes(item){const img=new Image();img.src=await blobToDataURL(item.blob);await img.decode();const c=document.createElement('canvas');const rot=item.rotation||0;const sideways=rot%180!==0;c.width=sideways?img.height:img.width;c.height=sideways?img.width:img.height;const x=c.getContext('2d');x.translate(c.width/2,c.height/2);x.rotate(rot*Math.PI/180);x.filter=FILTERS[item.filter]||'none';x.drawImage(img,-img.width/2,-img.height/2);x.filter='none';const b=await new Promise(r=>c.toBlob(r,'image/png'));return new Uint8Array(await b.arrayBuffer())}
-async function makePdf(){if(!scans.length){toast('أضف صورة واحدة على الأقل');return}try{const {PDFDocument}=PDFLib;const doc=await PDFDocument.create();if(currentScanMode==='id'&&scans.length>=2){const page=doc.addPage([595.28,841.89]);for(let i=0;i<Math.min(2,scans.length);i++){const png=await doc.embedPng(await imageToPngBytes(scans[i]));const maxW=500,maxH=300,scale=Math.min(maxW/png.width,maxH/png.height);page.drawImage(png,{x:(595.28-png.width*scale)/2,y:i===0?470:95,width:png.width*scale,height:png.height*scale})}}else{for(const s of scans){const png=await doc.embedPng(await imageToPngBytes(s));const page=doc.addPage([595.28,841.89]);const scale=Math.min(555/png.width,800/png.height);page.drawImage(png,{x:(595.28-png.width*scale)/2,y:(841.89-png.height*scale)/2,width:png.width*scale,height:png.height*scale})}}const bytes=await doc.save();const blob=new Blob([bytes],{type:'application/pdf'});const name=(currentScanMode==='id'?'ID-Card':'Scan')+'-'+new Date().toISOString().slice(0,10)+'.pdf';await saveFile(name,'application/pdf',blob);downloadBlob(blob,name);toast('تم إنشاء وحفظ ملف PDF');clearScans();refreshCount()}catch(e){console.error(e);toast('حدث خطأ أثناء إنشاء PDF')}}
+async function makePdf(){
+  if(!scans.length){toast('أضف صورة واحدة على الأقل');return}
+  try{
+    const {PDFDocument}=PDFLib,doc=await PDFDocument.create();
+    if(currentScanMode==='id'&&scans.length>=2){
+      const layout=$('idLayout')?.value||'vertical';
+      const page=layout==='horizontal'?doc.addPage([841.89,595.28]):doc.addPage([595.28,841.89]);
+      for(let i=0;i<2;i++){
+        const png=await doc.embedPng(await imageToPngBytes(scans[i]));
+        if(layout==='horizontal'){
+          const maxW=385,maxH=500,scale=Math.min(maxW/png.width,maxH/png.height);
+          const x=i===0?25:431,y=(595.28-png.height*scale)/2;
+          page.drawImage(png,{x,y,width:png.width*scale,height:png.height*scale});
+        }else{
+          const maxW=520,maxH=315,scale=Math.min(maxW/png.width,maxH/png.height);
+          const x=(595.28-png.width*scale)/2,y=i===0?470:55;
+          page.drawImage(png,{x,y,width:png.width*scale,height:png.height*scale});
+        }
+      }
+    }else{
+      for(const s of scans){
+        const png=await doc.embedPng(await imageToPngBytes(s));
+        const page=doc.addPage([595.28,841.89]),scale=Math.min(555/png.width,800/png.height);
+        page.drawImage(png,{x:(595.28-png.width*scale)/2,y:(841.89-png.height*scale)/2,width:png.width*scale,height:png.height*scale});
+      }
+    }
+    const bytes=await doc.save(),blob=new Blob([bytes],{type:'application/pdf'});
+    const name=(currentScanMode==='id'?'ID-Card':'Scan')+'-'+new Date().toISOString().slice(0,10)+'.pdf';
+    await saveFile(name,'application/pdf',blob);downloadBlob(blob,name);toast('تم إنشاء وحفظ ملف PDF');clearScans();refreshCount();
+  }catch(e){console.error(e);toast('حدث خطأ أثناء إنشاء PDF')}
+}
 function downloadBlob(blob,name){const a=document.createElement('a');const u=URL.createObjectURL(blob);a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1500)}
 function showPdfTools(){showOnly('pdfTools')}
 $('pdfInput').addEventListener('change',async e=>{try{const files=[...e.target.files];if(!files.length)return;const {PDFDocument}=PDFLib;pdfDoc=await PDFDocument.create();pdfPagesData=[];for(const f of files){const bytes=await f.arrayBuffer();const src=await PDFDocument.load(bytes);const copied=await pdfDoc.copyPages(src,src.getPageIndices());copied.forEach(p=>pdfDoc.addPage(p))}await renderPdfThumbs();toast('تم استيراد الصفحات')}catch(err){console.error(err);toast('تعذر فتح الملف. قد يكون محميًا بكلمة مرور.')}});
